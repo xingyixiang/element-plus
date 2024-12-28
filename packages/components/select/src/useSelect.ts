@@ -53,7 +53,88 @@ import type { ISelectProps, SelectOptionProxy } from './token'
 
 const MINIMUM_INPUT_WIDTH = 11
 
-export const useSelect = (props: ISelectProps, emit) => {
+type useSelectType = (
+  props: ISelectProps,
+  emit: any
+) => {
+  inputId: Ref<string | undefined>
+  contentId: Ref<string | undefined>
+  nsSelect: Ref<string | undefined>
+  nsInput: Ref<string | undefined>
+  states: Reactive<Record<string, any>>
+  isFocused: Ref<boolean>
+  expanded: Ref<boolean>
+  optionsArray: ComputedRef<any[]>
+  hoverOption: Ref<unknown>
+  selectSize: ComputedRef<'' | 'default' | 'small' | 'large'>
+  filteredOptionsCount: ComputedRef<number>
+  resetCalculatorWidth: () => void
+  updateTooltip: () => void
+  updateTagTooltip: () => void
+  debouncedOnInputChange: DebouncedFunc<() => void>
+  onInput: (event: Event) => void
+  deletePrevTag: (event: Event) => void
+  deleteTag: (event: Event, tag: any) => void
+  deleteSelected: (event: Event) => void
+  handleOptionSelect: (option: any) => void
+  scrollToOption: (option: any) => void
+  hasModelValue: ComputedRef<boolean>
+  shouldShowPlaceholder: ComputedRef<boolean>
+  currentPlaceholder: ComputedRef<string>
+  mouseEnterEventName: Ref<string | null>
+  needStatusIcon: ComputedRef<boolean>
+  showClose: ComputedRef<boolean>
+  iconComponent: ComputedRef<string>
+  iconReverse: ComputedRef<boolean>
+  validateState: ComputedRef<string>
+
+  validateIcon: ComputedRef<unknown>
+  showNewOption: ComputedRef<boolean>
+  updateOptions: () => void
+  collapseTagSize: ComputedRef<'default' | 'small'>
+  setSelected: () => void
+  selectDisabled: ComputedRef<boolean>
+  emptyText: ComputedRef<string | null>
+  handleCompositionStart: (e: Event) => void
+  handleCompositionUpdate: (e: Event) => void
+  handleCompositionEnd: (e: Event) => void
+  onOptionCreate: (vm: SelectOptionProxy) => void
+  onOptionDestroy: (key: any, vm: SelectOptionProxy) => void
+  handleMenuEnter: () => void
+  focus: () => void
+  blur: () => void
+  handleClearClick: (event: Event) => void
+  handleClickOutside: (event: Event) => void
+  handleEsc: () => void
+  toggleMenu: () => void
+  selectOption: () => void
+  getValueKey: (item: any) => any
+  navigateOptions: (direction: string) => void
+  dropdownMenuVisible: WritableComputedRef<boolean>
+  showTagList: ComputedRef<unknown[]>
+  collapseTagList: ComputedRef<unknown[]>
+  tagStyle: ComputedRef<unknown>
+  collapseTagStyle: ComputedRef<unknown>
+  inputStyle: ComputedRef<unknown>
+  popperRef: ComputedRef<unknown>
+  inputRef: Ref<HTMLInputElement | null>
+  tooltipRef: Ref<InstanceType<typeof ElTooltip> | null>
+  tagTooltipRef: Ref<InstanceType<typeof ElTooltip> | null>
+  calculatorRef: Ref<HTMLElement>
+  prefixRef: Ref<HTMLElement>
+  suffixRef: Ref<HTMLElement>
+  selectRef: Ref<HTMLElement>
+  wrapperRef: Ref<HTMLElement>
+  selectionRef: Ref<HTMLElement>
+  scrollbarRef: Ref<{
+    handleScroll: () => void
+  } | null>
+  menuRef: Ref<HTMLElement>
+  tagMenuRef: Ref<HTMLElement>
+  collapseItemRef: Ref<HTMLElement>
+}
+
+export const useSelect: useSelectType = (props: ISelectProps, emit) => {
   const { t } = useLocale()
   const contentId = useId()
   const nsSelect = useNamespace('select')
@@ -167,12 +248,14 @@ export const useSelect = (props: ISelectProps, emit) => {
 
   const debounce = computed(() => (props.remote ? 300 : 0))
 
+  const isRemoteSearchEmpty = computed(
+    () => props.remote && !states.inputValue && states.options.size === 0
+  )
+
   const emptyText = computed(() => {
     if (props.loading) {
       return props.loadingText || t('el.select.loading')
     } else {
-      if (props.remote && !states.inputValue && states.options.size === 0)
-        return false
       if (
         props.filterable &&
         states.inputValue &&
@@ -241,7 +324,7 @@ export const useSelect = (props: ISelectProps, emit) => {
 
   const dropdownMenuVisible = computed({
     get() {
-      return expanded.value && emptyText.value !== false
+      return expanded.value && !isRemoteSearchEmpty.value
     },
     set(val: boolean) {
       expanded.value = val
@@ -312,15 +395,7 @@ export const useSelect = (props: ISelectProps, emit) => {
     () => {
       if (!isClient) return
       // tooltipRef.value?.updatePopper?.()
-      const inputs = selectRef.value?.querySelectorAll('input') || []
-      if (
-        (!props.filterable &&
-          !props.defaultFirstOption &&
-          !isUndefined(props.modelValue)) ||
-        !Array.from(inputs).includes(document.activeElement as HTMLInputElement)
-      ) {
-        setSelected()
-      }
+      setSelected()
       if (
         props.defaultFirstOption &&
         (props.filterable || props.remote) &&
@@ -697,7 +772,7 @@ export const useSelect = (props: ISelectProps, emit) => {
       toggleMenu()
     } else {
       const option = optionsArray.value[states.hoveringIndex]
-      if (option && !option.disabled && !option.states.groupDisabled) {
+      if (option && !option.isDisabled) {
         handleOptionSelect(option)
       }
     }
@@ -710,7 +785,7 @@ export const useSelect = (props: ISelectProps, emit) => {
   const optionsAllDisabled = computed(() =>
     optionsArray.value
       .filter((option) => option.visible)
-      .every((option) => option.disabled)
+      .every((option) => option.isDisabled)
   )
 
   const showTagList = computed(() => {
@@ -756,11 +831,7 @@ export const useSelect = (props: ISelectProps, emit) => {
         }
       }
       const option = optionsArray.value[states.hoveringIndex]
-      if (
-        option.disabled === true ||
-        option.states.groupDisabled === true ||
-        !option.visible
-      ) {
+      if (option.isDisabled || !option.visible) {
         navigateOptions(direction)
       }
       nextTick(() => scrollToOption(hoverOption.value))
