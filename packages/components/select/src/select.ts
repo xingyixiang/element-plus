@@ -223,6 +223,13 @@ export const selectProps = buildProps({
     default: true,
   },
   /**
+   * @description whether to disable form validation status
+   */
+  disabledStatus: {
+    type: Boolean,
+    default: false,
+  },
+  /**
    * @description in remote search method show suffix icon
    */
   remoteShowSuffix: Boolean,

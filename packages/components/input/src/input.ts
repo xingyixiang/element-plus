@@ -152,6 +152,13 @@ export const inputProps = buildProps({
     default: true,
   },
   /**
+   * @description whether to disable form validation status
+   */
+  disabledStatus: {
+    type: Boolean,
+    default: false,
+  },
+  /**
    * @description input or textarea element style
    */
   inputStyle: {

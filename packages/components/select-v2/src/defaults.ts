@@ -241,6 +241,13 @@ export const selectV2Props = buildProps({
     default: true,
   },
   /**
+   * @description whether to disable form validation status
+   */
+  disabledStatus: {
+    type: Boolean,
+    default: false,
+  },
+  /**
    * @description offset of the dropdown
    */
   offset: {

@@ -7,6 +7,7 @@
       :size="size"
       :teleported="teleported"
       :validate-event="false"
+      :disabled-status="false"
       :append-to="appendSizeTo"
       @change="handleChange"
     >

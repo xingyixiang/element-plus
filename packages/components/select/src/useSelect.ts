@@ -159,7 +159,12 @@ export const useSelect = (props: SelectProps, emit: SelectEmits) => {
     nsSelect.is('reverse', !!(iconComponent.value && expanded.value))
   )
 
-  const validateState = computed(() => formItem?.validateState || '')
+  const validateState = computed(() => {
+    if (props.disabledStatus) {
+      return ''
+    }
+    return formItem?.validateState || ''
+  })
   const validateIcon = computed(
     () =>
       validateState.value &&
