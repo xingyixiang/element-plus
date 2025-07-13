@@ -1,7 +1,8 @@
 import dayjs from 'dayjs'
-import { isArray } from '@element-plus/utils'
+import { isArray, isString } from '@element-plus/utils'
 import { rangeArr } from '@element-plus/components/time-picker'
 
+import type { ComputedRef } from 'vue'
 import type { Dayjs } from 'dayjs'
 import type { DateCell } from './date-picker.type'
 import type { DisabledDateType } from './props/shared'
@@ -24,6 +25,7 @@ export const isValidRange = (range: DayRange): boolean => {
 
 type GetDefaultValueParams = {
   lang: string
+  step?: number
   unit: 'month' | 'year'
   unlinkPanels: boolean
 }
@@ -32,14 +34,14 @@ export type DefaultValue = [Date, Date] | Date | undefined
 
 export const getDefaultValue = (
   defaultValue: DefaultValue,
-  { lang, unit, unlinkPanels }: GetDefaultValueParams
+  { lang, step = 1, unit, unlinkPanels }: GetDefaultValueParams
 ) => {
   let start: Dayjs
 
   if (isArray(defaultValue)) {
     let [left, right] = defaultValue.map((d) => dayjs(d).locale(lang))
     if (!unlinkPanels) {
-      right = left.add(1, unit)
+      right = left.add(step, unit)
     }
     return [left, right]
   } else if (defaultValue) {
@@ -48,7 +50,7 @@ export const getDefaultValue = (
     start = dayjs()
   }
   start = start.locale(lang)
-  return [start, start.add(1, unit)]
+  return [start, start.add(step, unit)]
 }
 
 type Dimension = {
@@ -139,20 +141,40 @@ export const buildPickerTable = (
   }
 }
 
-export const datesInMonth = (year: number, month: number, lang: string) => {
-  const firstDay = dayjs().locale(lang).startOf('month').month(month).year(year)
+export const datesInMonth = (
+  date: Dayjs,
+  year: number,
+  month: number,
+  lang: string
+) => {
+  const firstDay = dayjs()
+    .locale(lang)
+    .startOf('month')
+    .month(month)
+    .year(year)
+    .hour(date.hour())
+    .minute(date.minute())
+    .second(date.second())
+
   const numOfDays = firstDay.daysInMonth()
   return rangeArr(numOfDays).map((n) => firstDay.add(n, 'day').toDate())
 }
 
 export const getValidDateOfMonth = (
+  date: Dayjs,
   year: number,
   month: number,
   lang: string,
   disabledDate?: DisabledDateType
 ) => {
-  const _value = dayjs().year(year).month(month).startOf('month')
-  const _date = datesInMonth(year, month, lang).find((date) => {
+  const _value = dayjs()
+    .year(year)
+    .month(month)
+    .startOf('month')
+    .hour(date.hour())
+    .minute(date.minute())
+    .second(date.second())
+  const _date = datesInMonth(date, year, month, lang).find((date) => {
     return !disabledDate?.(date)
   })
   if (_date) {
@@ -171,12 +193,12 @@ export const getValidDateOfYear = (
     return value.locale(lang)
   }
   const month = value.month()
-  if (!datesInMonth(year, month, lang).every(disabledDate)) {
-    return getValidDateOfMonth(year, month, lang, disabledDate)
+  if (!datesInMonth(value, year, month, lang).every(disabledDate)) {
+    return getValidDateOfMonth(value, year, month, lang, disabledDate)
   }
   for (let i = 0; i < 12; i++) {
-    if (!datesInMonth(year, i, lang).every(disabledDate)) {
-      return getValidDateOfMonth(year, i, lang, disabledDate)
+    if (!datesInMonth(value, year, i, lang).every(disabledDate)) {
+      return getValidDateOfMonth(value, year, i, lang, disabledDate)
     }
   }
   return value
@@ -185,13 +207,16 @@ export const getValidDateOfYear = (
 export const correctlyParseUserInput = (
   value: string | Dayjs | Dayjs[],
   format: string,
-  lang: string
+  lang: string,
+  defaultFormat: ComputedRef<boolean>
 ): Dayjs | Dayjs[] => {
   if (isArray(value)) {
-    return value.map((v) => correctlyParseUserInput(v, format, lang) as Dayjs)
+    return value.map(
+      (v) => correctlyParseUserInput(v, format, lang, defaultFormat) as Dayjs
+    )
   }
-  if (typeof value === 'string') {
-    const dayjsValue = dayjs(value)
+  if (isString(value)) {
+    const dayjsValue = defaultFormat.value ? dayjs(value) : dayjs(value, format)
     if (!dayjsValue.isValid()) {
       // return directly if not valid
       return dayjsValue
