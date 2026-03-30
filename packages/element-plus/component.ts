@@ -1,7 +1,7 @@
 import { ElAffix } from '@element-plus/components/affix'
 import { ElAlert } from '@element-plus/components/alert'
 import { ElAutocomplete } from '@element-plus/components/autocomplete'
-import { ElAvatar } from '@element-plus/components/avatar'
+import { ElAvatar, ElAvatarGroup } from '@element-plus/components/avatar'
 import { ElBacktop } from '@element-plus/components/backtop'
 import { ElBadge } from '@element-plus/components/badge'
 import {
@@ -99,7 +99,6 @@ import { ElTimePicker } from '@element-plus/components/time-picker'
 import { ElTimeSelect } from '@element-plus/components/time-select'
 import { ElTimeline, ElTimelineItem } from '@element-plus/components/timeline'
 import { ElTooltip } from '@element-plus/components/tooltip'
-import { ElTooltipV2 } from '@element-plus/components/tooltip-v2'
 import { ElTransfer } from '@element-plus/components/transfer'
 import { ElTree } from '@element-plus/components/tree'
 import { ElTreeSelect } from '@element-plus/components/tree-select'
@@ -120,6 +119,7 @@ export default [
   ElAutocomplete,
   ElAutoResizer,
   ElAvatar,
+  ElAvatarGroup,
   ElBacktop,
   ElBadge,
   ElBreadcrumb,
@@ -210,7 +210,6 @@ export default [
   ElTimeline,
   ElTimelineItem,
   ElTooltip,
-  ElTooltipV2,
   ElTransfer,
   ElTree,
   ElTreeSelect,

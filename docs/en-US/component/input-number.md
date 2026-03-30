@@ -23,7 +23,7 @@ When inputting invalid string to the input box, input value will emit `NaN` to t
 
 ## Disabled
 
-:::demo The `disabled` attribute accepts a `boolean`, and if the value is `true`, the component is disabled. If you just need to control the value within a range, you can add `min` attribute to set the minimum value and `max` to set the maximum value. By default, the minimum value is `0`.
+:::demo The `disabled` attribute accepts a `boolean`, and if the value is `true`, the component is disabled. If you just need to control the value within a range, you can add `min` attribute to set the minimum value and `max` to set the maximum value. By default, the minimum value is `Number.MIN_SAFE_INTEGER`.
 
 input-number/disabled
 
@@ -92,6 +92,12 @@ input-number/custom
 :::demo Use the prefix and suffix named slots.
 
 input-number/with-prefix-suffix
+
+:::
+
+:::tip
+
+For precision purposes, the input number is limited from [Number.MIN_SAFE_INTEGER](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/MIN_SAFE_INTEGER) to [Number.MAX_SAFE_INTEGER](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/MAX_SAFE_INTEGER).
 
 :::
 

@@ -92,15 +92,31 @@
               </div>
 
               <el-tooltip
-                v-if="collapseTags && modelValue.length > maxCollapseTags"
+                v-if="
+                  collapseTags && states.cachedOptions.length > maxCollapseTags
+                "
                 ref="tagTooltipRef"
                 :disabled="dropdownMenuVisible || !collapseTagsTooltip"
-                :fallback-placements="['bottom', 'top', 'right', 'left']"
-                :effect="effect"
-                placement="bottom"
-                :popper-class="popperClass"
-                :popper-style="popperStyle"
-                :teleported="teleported"
+                :fallback-placements="
+                  tagTooltip?.fallbackPlacements ?? [
+                    'bottom',
+                    'top',
+                    'right',
+                    'left',
+                  ]
+                "
+                :effect="tagTooltip?.effect ?? effect"
+                :placement="tagTooltip?.placement ?? 'bottom'"
+                :popper-class="tagTooltip?.popperClass ?? popperClass"
+                :popper-style="tagTooltip?.popperStyle ?? popperStyle"
+                :teleported="tagTooltip?.teleported ?? teleported"
+                :append-to="tagTooltip?.appendTo ?? appendTo"
+                :popper-options="tagTooltip?.popperOptions ?? popperOptions"
+                :transition="tagTooltip?.transition"
+                :show-after="tagTooltip?.showAfter"
+                :hide-after="tagTooltip?.hideAfter"
+                :auto-close="tagTooltip?.autoClose"
+                :offset="tagTooltip?.offset"
               >
                 <template #default>
                   <div
@@ -116,7 +132,7 @@
                       disable-transitions
                     >
                       <span :class="nsSelect.e('tags-text')">
-                        + {{ modelValue.length - maxCollapseTags }}
+                        + {{ states.cachedOptions.length - maxCollapseTags }}
                       </span>
                     </el-tag>
                   </div>
@@ -157,17 +173,22 @@
               :class="[
                 nsSelect.e('selected-item'),
                 nsSelect.e('input-wrapper'),
-                nsSelect.is('hidden', !filterable),
+                nsSelect.is(
+                  'hidden',
+                  !filterable ||
+                    selectDisabled ||
+                    (!states.inputValue && !isFocused)
+                ),
               ]"
             >
               <input
                 :id="inputId"
                 ref="inputRef"
-                v-model="states.inputValue"
+                :value="states.inputValue"
                 :style="inputStyle"
                 :autocomplete="autocomplete"
                 :tabindex="tabindex"
-                aria-autocomplete="list"
+                aria-autocomplete="none"
                 aria-haspopup="listbox"
                 autocapitalize="off"
                 :aria-expanded="expanded"
@@ -175,11 +196,18 @@
                 :class="[nsSelect.e('input'), nsSelect.is(selectSize)]"
                 :disabled="selectDisabled"
                 role="combobox"
+                :aria-controls="contentId"
+                :aria-activedescendant="
+                  states.hoveringIndex >= 0
+                    ? `${contentId}-${states.hoveringIndex}`
+                    : ''
+                "
                 :readonly="!filterable"
                 spellcheck="false"
                 type="text"
                 :name="name"
                 @input="onInput"
+                @change.stop
                 @compositionstart="handleCompositionStart"
                 @compositionupdate="handleCompositionUpdate"
                 @compositionend="handleCompositionEnd"
@@ -255,11 +283,13 @@
       </template>
       <template #content>
         <el-select-menu
+          :id="contentId"
           ref="menuRef"
           :data="filteredOptions"
-          :width="popperSize"
+          :width="popperSize - BORDER_HORIZONTAL_WIDTH"
           :hovering-index="states.hoveringIndex"
           :scrollbar-always-on="scrollbarAlwaysOn"
+          :aria-label="ariaLabel"
         >
           <template v-if="$slots.header" #header>
             <div :class="nsSelect.be('dropdown', 'header')" @click.stop>
@@ -299,11 +329,12 @@ import { ClickOutside } from '@element-plus/directives'
 import ElTooltip from '@element-plus/components/tooltip'
 import ElTag from '@element-plus/components/tag'
 import ElIcon from '@element-plus/components/icon'
-import { useCalcInputWidth } from '@element-plus/hooks'
+import { useCalcInputWidth, useId } from '@element-plus/hooks'
 import ElSelectMenu from './select-dropdown'
 import useSelect from './useSelect'
 import { selectV2Emits, selectV2Props } from './defaults'
 import { selectV2InjectionKey } from './token'
+import { BORDER_HORIZONTAL_WIDTH } from '@element-plus/constants'
 
 export default defineComponent({
   name: 'ElSelectV2',
@@ -336,6 +367,7 @@ export default defineComponent({
       emit
     )
     const { calculatorRef, inputStyle } = useCalcInputWidth()
+    const contentId = useId()
 
     provide(selectV2InjectionKey, {
       props: reactive({
@@ -345,6 +377,7 @@ export default defineComponent({
       }),
       expanded: API.expanded,
       tooltipRef: API.tooltipRef,
+      contentId,
       onSelect: API.onSelect,
       onHover: API.onHover,
       onKeyboardNavigate: API.onKeyboardNavigate,
@@ -355,7 +388,7 @@ export default defineComponent({
       if (!props.multiple) {
         return API.states.selectedLabel
       }
-      return API.states.cachedOptions.map((i) => i.label as string)
+      return API.states.cachedOptions.map((i) => API.getLabel(i) as string)
     })
 
     return {
@@ -364,6 +397,8 @@ export default defineComponent({
       selectedLabel,
       calculatorRef,
       inputStyle,
+      contentId,
+      BORDER_HORIZONTAL_WIDTH,
     }
   },
 })

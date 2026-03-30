@@ -13,7 +13,6 @@ export const getWorkspaceNames = async (dir = projRoot) => {
 }
 
 export const getPackageManifest = (pkgPath: string) => {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   return require(pkgPath) as ProjectManifest
 }
 
@@ -30,7 +29,7 @@ export const getPackageDependencies = (
 }
 
 export const excludeFiles = (files: string[]) => {
-  const excludes = ['node_modules', 'test', 'mock', 'gulpfile', 'dist']
+  const excludes = ['node_modules', 'test', 'mock', 'buildfile', 'dist']
   const projRootPath = normalizePath(projRoot)
   return files.filter((file) => {
     const position = file.startsWith(projRootPath) ? projRootPath.length : 0
