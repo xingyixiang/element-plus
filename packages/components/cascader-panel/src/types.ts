@@ -52,10 +52,12 @@ export interface CascaderProps {
 
 export interface Tag {
   node?: CascaderNode
-  key: number
+  key: number | string
   text: string
   hitState?: boolean
   closable: boolean
+  /** the raw value when the tag is created from an unmatched modelValue (allowCreate) */
+  value?: CascaderNodeValue | CascaderNodePathValue
 }
 
 export interface ElCascaderPanelContext {

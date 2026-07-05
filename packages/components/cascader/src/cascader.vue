@@ -188,6 +188,14 @@
           :view-class="nsCascader.e('suggestion-list')"
           @keydown="handleSuggestionKeyDown"
         >
+          <li
+            v-if="showNewOption"
+            :class="[nsCascader.e('suggestion-item')]"
+            :tabindex="-1"
+            @click="handleCustomOptionClick"
+          >
+            {{ searchKeyword }}
+          </li>
           <template v-if="suggestions.length">
             <li
               v-for="item in suggestions"
@@ -207,7 +215,7 @@
               </slot>
             </li>
           </template>
-          <slot v-else name="empty">
+          <slot v-else-if="!showNewOption" name="empty">
             <li :class="nsCascader.e('empty-text')">
               {{ t('el.cascader.noMatch') }}
             </li>
@@ -220,6 +228,15 @@
           :class="nsCascader.e('suggestion-panel')"
           @keydown="handleSuggestionKeyDown"
         >
+          <li
+            v-if="showNewOption"
+            :class="[nsCascader.e('suggestion-item')]"
+            :tabindex="-1"
+            @click="handleCustomOptionClick"
+          >
+            {{ searchKeyword }}
+          </li>
+
           <el-fixed-size-list
             v-show="suggestions.length"
             ref="suggestionVirtualListRef"
@@ -253,7 +270,7 @@
               </li>
             </template>
           </el-fixed-size-list>
-          <slot v-if="!suggestions.length" name="empty">
+          <slot v-if="!suggestions.length && !showNewOption" name="empty">
             <ul :class="nsCascader.e('suggestion-list')">
               <li :class="nsCascader.e('empty-text')">
                 {{ t('el.cascader.noMatch') }}
@@ -280,7 +297,7 @@ import {
   useSlots,
   watch,
 } from 'vue'
-import { clamp, cloneDeep } from 'lodash-unified'
+import { castArray, clamp, cloneDeep, isEqual, uniqueId } from 'lodash-unified'
 import { useCssVar, useDebounceFn, useResizeObserver } from '@vueuse/core'
 import {
   NOOP,
@@ -330,6 +347,7 @@ import type { ScrollbarInstance } from '@element-plus/components/scrollbar'
 import type { FixedSizeListInstance } from '@element-plus/components/virtual-list'
 import type {
   CascaderNode,
+  CascaderNodeValue,
   CascaderPanelInstance,
   CascaderValue,
   Tag,
@@ -439,6 +457,15 @@ const clampedSuggestionListHeight = computed(() =>
   clamp(suggestions.value.length * props.itemSize, props.itemSize, props.height)
 )
 
+const showNewOption = computed(() => {
+  return (
+    props.allowCreate &&
+    props.filterable &&
+    searchKeyword.value !== '' &&
+    suggestions.value.length === 0
+  )
+})
+
 const showTagList = computed(() => {
   if (!props.props.multiple) {
     return []
@@ -507,13 +534,22 @@ const clearBtnVisible = computed(() => {
   return !!checkedNodes.value.length
 })
 const presentText = computed(() => {
+  if (multiple.value) {
+    return ''
+  }
   const { showAllLevels, separator } = props
   const nodes = checkedNodes.value
-  return nodes.length
-    ? multiple.value
-      ? ''
-      : nodes[0].calcText(showAllLevels, separator)
-    : ''
+  if (
+    nodes.length === 0 &&
+    props.allowCreate &&
+    props.filterable &&
+    props.modelValue
+  ) {
+    return Array.isArray(props.modelValue)
+      ? props.modelValue.join(separator)
+      : (props.modelValue as string)
+  }
+  return nodes.length ? nodes[0].calcText(showAllLevels, separator) : ''
 })
 
 const validateState = computed(() => formItem?.validateState || '')
@@ -606,10 +642,17 @@ const genTag = (node: CascaderNode): Tag => {
 }
 
 const deleteTag = (tag: Tag) => {
-  const node = tag.node as CascaderNode
-  node.doCheck(false)
-  cascaderPanelRef.value?.calculateCheckedValue()
-  emit('removeTag', node.valueByOption)
+  if (tag.node) {
+    const node = tag.node
+    node.doCheck(false)
+    cascaderPanelRef.value?.calculateCheckedValue()
+    emit('removeTag', node.valueByOption)
+  } else if (tag.value !== undefined) {
+    // tag created from unmatched modelValue (allowCreate + filterable)
+    checkedValue.value = castArray(
+      checkedValue.value as CascaderNodeValue
+    ).filter((v) => !isEqual(v, tag.value)) as CascaderValue
+  }
 }
 
 const getStrategyCheckedNodes = (): CascaderNode[] => {
@@ -633,9 +676,27 @@ const calculatePresentTags = () => {
   if (!multiple.value) return
 
   const nodes = getStrategyCheckedNodes()
-
   const allTags: Tag[] = []
   nodes.forEach((node) => allTags.push(genTag(node)))
+
+  // when allowCreate && filterable, modelValue may have values
+  // that don't match any node in the options tree
+  if (props.allowCreate && props.filterable && props.modelValue) {
+    const nodeValues = nodes.map((n) => n.valueByOption)
+    const modelValues = castArray(props.modelValue as CascaderNodeValue)
+    modelValues.forEach((mv) => {
+      if (!nodeValues.some((nv) => isEqual(nv, mv))) {
+        allTags.push({
+          key: uniqueId('custom-tag-'),
+          text: Array.isArray(mv) ? mv.join(props.separator) : String(mv),
+          hitState: false,
+          closable: !isDisabled.value,
+          value: mv,
+        })
+      }
+    })
+  }
+
   tags.value = allTags
 }
 
@@ -846,6 +907,29 @@ const syncPresentTextValue = () => {
   const { value } = presentText
   inputValue.value = value
   searchInputValue.value = value
+}
+
+const handleCustomOptionClick = () => {
+  const { separator } = props
+  const { emitPath = true } = props.props
+  const keyword = searchKeyword.value
+  let value: string | string[] = keyword
+  if (emitPath) {
+    value = keyword.split(separator)
+  }
+
+  if (multiple.value) {
+    const prev = castArray(
+      cloneDeep(checkedValue.value) as CascaderNodeValue
+    ).filter((v) => !isEqual(v, valueOnClear.value))
+    if (!prev.some((v) => isEqual(v, value))) {
+      checkedValue.value = [...prev, value] as CascaderValue
+    }
+    searchInputValue.value = ''
+  } else {
+    emit(UPDATE_MODEL_EVENT, value)
+  }
+  togglePopperVisible(false)
 }
 
 const handleSuggestionClick = (node: CascaderNode) => {

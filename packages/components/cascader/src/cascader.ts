@@ -145,6 +145,10 @@ export interface CascaderComponentProps
    * @description whether the width of the suggestion panel is the same as the input, if the value is `number`, then the width is fixed
    */
   fitInputWidth?: boolean | number
+  /**
+   * @description whether creating new items is allowed. To use this, `filterable` must be true
+   */
+  allowCreate?: boolean
 }
 
 /**
@@ -323,6 +327,13 @@ export const cascaderProps = buildProps({
    */
   fitInputWidth: {
     type: [Boolean, Number],
+    default: false,
+  },
+  /**
+   * @description whether creating new items is allowed. To use this, `filterable` must be true
+   */
+  allowCreate: {
+    type: Boolean,
     default: false,
   },
   ...useEmptyValuesProps,
